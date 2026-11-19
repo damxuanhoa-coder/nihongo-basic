@@ -127,8 +127,11 @@ function resetAllProgress() {
 }
 
 // ============================================================================
-// 2. ÂM THANH PHÁT ÂM TIẾNG NHẬT CHUẨN (WEB SPEECH API) & DỪNG VIDEO YOUTUBE
+// 2. HỆ THỐNG PHÁT ÂM TIẾNG NHẬT ĐA NỀN TẢNG (MP3 CLOUD + WEB SPEECH API)
+//    Hoạt động 100% trên iPhone (kể cả chế độ Im lặng 🔕), Android & Zalo WebView
 // ============================================================================
+let currentTtsAudio = null;
+
 function pauseYouTubeVideo() {
   const iframe = document.querySelector("#lessonVideoBox iframe");
   if (iframe && iframe.contentWindow) {
@@ -149,34 +152,95 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-function speakJapanese(text, onEndCallback) {
-  // Tạm dừng video YouTube nếu đang phát để không bị chồng âm thanh
-  pauseYouTubeVideo();
-
+// Hàm dự phòng dùng bộ đọc nội bộ của thiết bị khi không có mạng
+function fallbackDeviceSpeech(text, onEndCallback) {
   if (!("speechSynthesis" in window)) {
-    alert("Trình duyệt của bạn không hỗ trợ đọc giọng nói tự động.");
     if (onEndCallback) onEndCallback();
     return;
   }
-  window.speechSynthesis.cancel();
+  try {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "ja-JP";
+    utter.rate = speechSpeed;
+    utter.pitch = 1.05;
 
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "ja-JP";
-  utter.rate = speechSpeed;
-  utter.pitch = 1.05;
+    const voices = window.speechSynthesis.getVoices();
+    const jpVoice = voices.find((v) => v.lang.includes("ja") || v.lang.includes("JP"));
+    if (jpVoice) utter.voice = jpVoice;
 
-  const voices = window.speechSynthesis.getVoices();
-  const jpVoice = voices.find((v) => v.lang.includes("ja") || v.lang.includes("JP"));
-  if (jpVoice) {
-    utter.voice = jpVoice;
+    if (onEndCallback) {
+      utter.onend = onEndCallback;
+      utter.onerror = onEndCallback;
+    }
+    window.speechSynthesis.speak(utter);
+  } catch (e) {
+    if (onEndCallback) onEndCallback();
+  }
+}
+
+function speakJapanese(text, onEndCallback) {
+  // 1. Tạm dừng video YouTube nếu đang phát
+  pauseYouTubeVideo();
+
+  // 2. Bật kênh âm thanh Media Playback trên iOS 17+ (phát ra loa ngoài kể cả khi iPhone đang để Chuông Im Lặng 🔕)
+  if ("audioSession" in navigator) {
+    try {
+      navigator.audioSession.type = "playback";
+    } catch (e) {}
   }
 
-  if (onEndCallback) {
-    utter.onend = onEndCallback;
-    utter.onerror = onEndCallback;
+  // 3. Dừng âm thanh cũ đang đọc dở
+  if (currentTtsAudio) {
+    try {
+      currentTtsAudio.pause();
+      currentTtsAudio.currentTime = 0;
+    } catch (e) {}
+  }
+  if ("speechSynthesis" in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
   }
 
-  window.speechSynthesis.speak(utter);
+  // 4. Phát luồng âm thanh MP3 Giọng Nhật Bản Xứ (Google TTS ja-JP)
+  //    Hoạt động mượt trên mọi trình duyệt Điện thoại, iPhone, Android và trong Zalo
+  try {
+    const cleanText = String(text || "").trim();
+    if (!cleanText) {
+      if (onEndCallback) onEndCallback();
+      return;
+    }
+
+    const ttsUrl =
+      "https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=gtx&q=" +
+      encodeURIComponent(cleanText);
+
+    const audio = new Audio(ttsUrl);
+    currentTtsAudio = audio;
+    audio.playbackRate = speechSpeed === 0.65 ? 0.72 : 1.0;
+
+    let handledFallback = false;
+    const triggerFallback = () => {
+      if (handledFallback) return;
+      handledFallback = true;
+      fallbackDeviceSpeech(cleanText, onEndCallback);
+    };
+
+    if (onEndCallback) {
+      audio.onended = onEndCallback;
+    }
+    audio.onerror = triggerFallback;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        triggerFallback();
+      });
+    }
+  } catch (e) {
+    fallbackDeviceSpeech(text, onEndCallback);
+  }
 }
 
 function toggleSpeechSpeed() {
@@ -645,9 +709,10 @@ function renderLessonDetail(index, userClicked) {
     if (anchor) anchor.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // Nhúng Video YouTube đã xác thực oEmbed (kèm enablejsapi=1 để tự động pause khi chuyển tab)
+  // Nhúng Video YouTube đã xác thực oEmbed (kèm enablejsapi=1 & referrerpolicy="origin")
   document.getElementById("lessonVideoBox").innerHTML = `
     <iframe
+      referrerpolicy="origin"
       src="https://www.youtube.com/embed/${lesson.videoId}?rel=0&enablejsapi=1"
       title="${lesson.videoTitle}"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -816,6 +881,12 @@ function stopAutoSlideLecture() {
     clearTimeout(autoSlideTimer);
   }
   autoSlideTimer = null;
+  if (currentTtsAudio) {
+    try {
+      currentTtsAudio.pause();
+      currentTtsAudio.currentTime = 0;
+    } catch (e) {}
+  }
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   const box = document.getElementById("interactiveSlideBox");
   if (box && document.getElementById("lessonSlideView").style.display === "block") {

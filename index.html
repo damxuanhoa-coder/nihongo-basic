@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#2b5f56" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Học Tiếng Nhật" />
+  <title>日本語 - Học Tiếng Nhật</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- HEADER TỐI GIẢN CHUẨN APP NHẬT -->
+  <header class="top-header">
+    <div class="header-inner">
+      <div class="brand-minimal">
+        <span class="jp-title">日本語</span>
+        <span class="vi-title">Học Tiếng Nhật</span>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="speedToggleBtn" onclick="toggleSpeechSpeed()" title="Tốc độ phát âm">
+          🔊 <span id="speedLabel">0.9x</span>
+        </button>
+        <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Đổi giao diện Sáng/Tối">
+          🌙
+        </button>
+        <button class="icon-btn" onclick="switchTab('tab-parent')" title="Quản lý & Thêm bài học">
+          ⚙️
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- THANH MENU CHÍNH TRỰC DIỆN (5 MỤC HỌC NGAY) -->
+  <nav class="main-nav" aria-label="Menu học tập">
+    <button class="nav-tab active" data-target="tab-kana" onclick="switchTab('tab-kana')">
+      あ Chữ cái
+    </button>
+    <button class="nav-tab" data-target="tab-numbers" onclick="switchTab('tab-numbers')">
+      🔢 Số đếm
+    </button>
+    <button class="nav-tab" data-target="tab-lessons" onclick="switchTab('tab-lessons')">
+      📖 Bài học
+    </button>
+    <button class="nav-tab" data-target="tab-grammar" onclick="switchTab('tab-grammar')">
+      ⛩️ Ngữ pháp & Kanji
+    </button>
+    <button class="nav-tab" data-target="tab-games" onclick="switchTab('tab-games')">
+      🎯 Quiz
+    </button>
+  </nav>
+
+  <!-- THANH MENU DƯỚI ĐÁY CHO ĐIỆN THOẠI -->
+  <nav class="mobile-bottom-nav" aria-label="Menu di động">
+    <button class="mob-nav-btn active" data-target="tab-kana" onclick="switchTab('tab-kana')">
+      <span class="mob-icon">あ</span>
+      <span>Chữ cái</span>
+    </button>
+    <button class="mob-nav-btn" data-target="tab-numbers" onclick="switchTab('tab-numbers')">
+      <span class="mob-icon">🔢</span>
+      <span>Số đếm</span>
+    </button>
+    <button class="mob-nav-btn" data-target="tab-lessons" onclick="switchTab('tab-lessons')">
+      <span class="mob-icon">📖</span>
+      <span>Bài học</span>
+    </button>
+    <button class="mob-nav-btn" data-target="tab-grammar" onclick="switchTab('tab-grammar')">
+      <span class="mob-icon">⛩️</span>
+      <span>Kanji</span>
+    </button>
+    <button class="mob-nav-btn" data-target="tab-games" onclick="switchTab('tab-games')">
+      <span class="mob-icon">🎯</span>
+      <span>Quiz</span>
+    </button>
+  </nav>
+
+  <!-- Ẩn các biến thống kê cũ để không phát sinh lỗi JS -->
+  <div style="display:none;">
+    <span id="xpCount">0</span>
+    <span id="streakCount">1</span>
+    <span id="userLevel"></span>
+    <span id="hiraProgressText"></span>
+    <span id="kataProgressText"></span>
+    <span id="lessonCountText"></span>
+  </div>
+
+  <main class="container">
+
+    <!-- ================================================================= -->
+    <!-- TAB 1: BẢNG CHỮ CÁI HIRAGANA & KATAKANA (VÀO THẲNG BẢNG CHỮ)      -->
+    <!-- ================================================================= -->
+    <section id="tab-kana" class="tab-panel active">
+      <div class="sub-toolbar">
+        <div class="pill-group">
+          <button class="pill-btn active" id="btnShowHira" onclick="switchKanaType('hiragana')">
+            あ Hiragana (46)
+          </button>
+          <button class="pill-btn" id="btnShowKata" onclick="switchKanaType('katakana')">
+            ア Katakana (46)
+          </button>
+        </div>
+        <span class="minimal-hint">Bấm vào chữ để nghe & tập viết</span>
+      </div>
+
+      <div id="kanaGridContainer" class="kana-grid"></div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 2: BẢNG SỐ ĐẾM (0 -> 10, CHỤC, TRĂM, NGHÌN, VẠN)              -->
+    <!-- ================================================================= -->
+    <section id="tab-numbers" class="tab-panel">
+      <!-- Máy đổi số nhanh gọn -->
+      <div class="number-converter-bar">
+        <div class="nc-input-group">
+          <label for="customNumberInput">Tra số bất kỳ:</label>
+          <input
+            type="number"
+            id="customNumberInput"
+            min="0"
+            max="99999999"
+            value="14"
+            oninput="convertCustomNumber()"
+          />
+          <button class="btn-primary" onclick="speakCustomNumber()">🔊 Đọc</button>
+        </div>
+        <div class="nc-output-group">
+          <span id="numResultKanji" class="nc-kanji">十四</span>
+          <span id="numResultKana" class="nc-kana">じゅうよん</span>
+          <span id="numResultRomaji" class="nc-romaji">(juu-yon)</span>
+        </div>
+      </div>
+
+      <!-- Chọn nhanh nhóm số -->
+      <div class="sub-toolbar">
+        <div class="pill-group">
+          <button class="pill-btn active" onclick="filterNumberTable('all', this)">Tất cả</button>
+          <button class="pill-btn" onclick="filterNumberTable('basic', this)">0 → 10</button>
+          <button class="pill-btn" onclick="filterNumberTable('tens', this)">Hàng chục</button>
+          <button class="pill-btn" onclick="filterNumberTable('hundreds', this)">Hàng trăm</button>
+          <button class="pill-btn" onclick="filterNumberTable('thousands', this)">Nghìn & Vạn</button>
+        </div>
+      </div>
+
+      <div id="numbersTablesContent"></div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 3: BÀI HỌC (DANH SÁCH GỌN GÀNG + VIDEO + TỪ VỰNG + FLASHCARD) -->
+    <!-- ================================================================= -->
+    <section id="tab-lessons" class="tab-panel">
+      <div class="lesson-layout">
+        <!-- Danh sách bài học kiểu List phẳng gọn gàng có dấu > -->
+        <aside class="lesson-sidebar" id="lessonSidebar"></aside>
+
+        <!-- Nội dung bài học -->
+        <div class="lesson-detail-card" id="lessonContentAnchor">
+          <div id="lessonHeaderArea"></div>
+
+          <div class="sub-toolbar" style="margin-top: 12px;">
+            <div class="pill-group">
+              <button class="pill-btn active" id="btnLessonStudyMode" onclick="setLessonViewMode('study')">
+                📖 Từ vựng & Video
+              </button>
+              <button class="pill-btn" id="btnLessonSlideMode" onclick="setLessonViewMode('slide')">
+                🎞️ Tự động đọc
+              </button>
+              <button class="pill-btn" id="btnLessonFlashcardMode" onclick="setLessonViewMode('flashcard')">
+                🗂️ Flashcard
+              </button>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="openChangeVideoModal()">
+              🎬 Đổi link Video
+            </button>
+          </div>
+
+          <!-- Khung 1: Từ vựng + Video -->
+          <div id="lessonStudyView">
+            <div class="vocab-grid" id="lessonVocabGrid"></div>
+            <div class="summary-notes" id="lessonSummaryBox"></div>
+            <div class="video-container" id="lessonVideoBox"></div>
+          </div>
+
+          <!-- Khung 2: Slide tự động đọc -->
+          <div id="lessonSlideView" style="display: none;">
+            <div class="interactive-slide-player" id="interactiveSlideBox"></div>
+          </div>
+
+          <!-- Khung 3: Flashcard -->
+          <div id="lessonFlashcardView" style="display: none; text-align: center; padding: 12px 0;">
+            <div class="flashcard-stage">
+              <div class="flashcard-3d" id="flashcard3D" onclick="flipFlashcard()">
+                <div class="fc-face fc-front" id="fcFront"></div>
+                <div class="fc-face fc-back" id="fcBack"></div>
+              </div>
+            </div>
+            <div class="flashcard-controls">
+              <button class="btn-secondary" onclick="prevFlashcard()">⬅️ Trước</button>
+              <strong id="fcCounterText">1 / 6</strong>
+              <button class="btn-secondary" onclick="nextFlashcard()">Tiếp ➡️</button>
+              <button class="btn-primary" onclick="speakCurrentFlashcard()">🔊 Phát âm</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 4: NGỮ PHÁP & KANJI                                           -->
+    <!-- ================================================================= -->
+    <section id="tab-grammar" class="tab-panel">
+      <div class="sub-toolbar">
+        <div class="pill-group">
+          <button class="pill-btn active" id="btnShowGrammar" onclick="switchGrammarSubTab('grammar')">
+            Ngữ pháp (8)
+          </button>
+          <button class="pill-btn" id="btnShowKanji" onclick="switchGrammarSubTab('kanji')">
+            Kanji cơ bản (16)
+          </button>
+        </div>
+      </div>
+
+      <div id="grammarListContainer"></div>
+      <div id="kanjiListContainer" class="kanji-grid" style="display: none;"></div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 5: QUIZ MENU TỐI GIẢN (GIỐNG APP JLPT MẪU)                     -->
+    <!-- ================================================================= -->
+    <section id="tab-games" class="tab-panel">
+      <!-- Bảng chọn Quiz tối giản 2 cột kiểu JLPT App -->
+      <div class="jlpt-quiz-selector">
+        <div class="jlpt-col">
+          <div class="jlpt-col-title">Chọn phần học</div>
+          <div class="jlpt-btn-stack" id="quizTopicButtons">
+            <button class="jlpt-btn t-pink active" onclick="selectQuizTopic('hiragana', this)">Hiragana</button>
+            <button class="jlpt-btn t-orange" onclick="selectQuizTopic('katakana', this)">Katakana</button>
+            <button class="jlpt-btn t-yellow" onclick="selectQuizTopic('numbers', this)">Số đếm</button>
+            <button class="jlpt-btn t-blue" onclick="selectQuizTopic('vocab', this)">Từ vựng</button>
+            <button class="jlpt-btn t-green" onclick="selectQuizTopic('kanji', this)">Kanji</button>
+          </div>
+        </div>
+
+        <div class="jlpt-plus">+</div>
+
+        <div class="jlpt-col">
+          <div class="jlpt-col-title">Chọn kiểu luyện</div>
+          <div class="jlpt-btn-stack" id="quizModeButtons">
+            <button class="jlpt-btn m-coral active" id="btnGameQuiz" onclick="switchGameMode('quiz')">Trắc nghiệm</button>
+            <button class="jlpt-btn m-teal" id="btnGameMatch" onclick="switchGameMode('match')">Ghép cặp</button>
+            <button class="jlpt-btn m-indigo" id="btnGameListen" onclick="switchGameMode('listen')">Luyện nghe</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Select ẩn giữ tương thích với hàm cũ -->
+      <select id="quizTopicSelect" style="display:none;">
+        <option value="hiragana" selected>hiragana</option>
+        <option value="katakana">katakana</option>
+        <option value="numbers">numbers</option>
+        <option value="vocab">vocab</option>
+        <option value="kanji">kanji</option>
+      </select>
+
+      <!-- Khung 1: Trắc nghiệm -->
+      <div id="gameQuizArea" class="quiz-box">
+        <div class="quiz-meta">
+          <span id="quizCategoryLabel">Hiragana</span>
+          <span id="quizScoreLabel">Chuỗi đúng: 0</span>
+        </div>
+        <div class="quiz-question-big" id="quizQuestionMain">あ</div>
+        <button class="audio-btn" onclick="speakQuizCurrent()">🔊 Nghe</button>
+
+        <div class="quiz-options" id="quizOptionsGrid"></div>
+        <div id="quizFeedbackBox" class="quiz-feedback"></div>
+        <button class="btn-primary" style="margin-top: 10px;" onclick="initQuizQuestion()">
+          Câu tiếp theo ➡️
+        </button>
+      </div>
+
+      <!-- Khung 2: Ghép thẻ -->
+      <div id="gameMatchArea" class="quiz-box" style="display: none; max-width: 820px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong id="matchStatusText">Chọn 2 ô tương ứng</strong>
+          <button class="btn-secondary btn-sm" onclick="initMatchingGame()">🔄 Đổi đề</button>
+        </div>
+        <div class="match-grid" id="matchGridContainer"></div>
+      </div>
+
+      <!-- Khung 3: Luyện nghe -->
+      <div id="gameListenArea" class="quiz-box" style="display: none;">
+        <div style="margin: 12px 0;">
+          <button class="btn-primary" style="font-size: 1.1rem; padding: 14px 28px; border-radius: 999px;" onclick="speakListenCurrent()">
+            🔊 Bấm nghe phát âm
+          </button>
+        </div>
+        <div id="listenRevealText" style="font-size: 1.3rem; font-weight: 800; color: var(--primary); min-height: 32px;">
+          ❓ ❓ ❓
+        </div>
+        <div class="quiz-options" id="listenOptionsGrid"></div>
+        <div id="listenFeedbackBox" class="quiz-feedback"></div>
+        <button class="btn-primary" style="margin-top: 10px;" onclick="initListenQuestion()">
+          Câu tiếp theo ➡️
+        </button>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB QUẢN LÝ (CHỈ MỞ KHI BẤM NÚT ⚙️ Ở GÓC PHẢI TRÊN)              -->
+    <!-- ================================================================= -->
+    <section id="tab-parent" class="tab-panel">
+      <div class="parent-grid">
+        <div class="lesson-detail-card">
+          <h3>➕ Thêm Từ Vựng Mới</h3>
+          <form onsubmit="handleAddCustomVocab(event)" style="margin-top: 12px;">
+            <div class="form-group">
+              <label>Bài học:</label>
+              <select id="addVocabLessonId"></select>
+            </div>
+            <div class="form-group">
+              <label>Tiếng Nhật:</label>
+              <input type="text" id="addVocabJp" placeholder="ドラえもん" required />
+            </div>
+            <div class="form-group">
+              <label>Romaji:</label>
+              <input type="text" id="addVocabRomaji" placeholder="Doraemon" required />
+            </div>
+            <div class="form-group">
+              <label>Nghĩa tiếng Việt:</label>
+              <input type="text" id="addVocabVi" placeholder="Mèo máy Doraemon" required />
+            </div>
+            <div class="form-group">
+              <label>Biểu tượng (Emoji):</label>
+              <input type="text" id="addVocabIcon" value="🌟" />
+            </div>
+            <div class="form-group">
+              <label>Câu ví dụ tiếng Nhật:</label>
+              <input type="text" id="addVocabExJp" placeholder="ドラえもん が すき です。" />
+            </div>
+            <div class="form-group">
+              <label>Nghĩa câu ví dụ:</label>
+              <input type="text" id="addVocabExVi" placeholder="Thích Doraemon." />
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">💾 Lưu từ vựng</button>
+          </form>
+        </div>
+
+        <div class="lesson-detail-card">
+          <h3>📚 Tạo Bài Học Mới & Xuất Dữ Liệu</h3>
+          <form onsubmit="handleCreateNewLesson(event)" style="margin-top: 12px;">
+            <div class="form-group">
+              <label>Cấp độ:</label>
+              <input type="text" id="newLessonLevel" value="N5" required />
+            </div>
+            <div class="form-group">
+              <label>Tiêu đề bài học:</label>
+              <input type="text" id="newLessonTitle" placeholder="Bài 12: Chủ đề mới" required />
+            </div>
+            <div class="form-group">
+              <label>Mô tả ngắn:</label>
+              <input type="text" id="newLessonSubtitle" placeholder="Tóm tắt nội dung" required />
+            </div>
+            <div class="form-group">
+              <label>Emoji:</label>
+              <input type="text" id="newLessonIcon" value="📘" required />
+            </div>
+            <div class="form-group">
+              <label>Link YouTube:</label>
+              <input type="text" id="newLessonVideo" placeholder="https://www.youtube.com/watch?v=..." required />
+            </div>
+            <div class="form-group">
+              <label>Ghi chú trọng tâm:</label>
+              <input type="text" id="newLessonNote" placeholder="Điểm ngữ pháp/từ vựng chính" required />
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">✨ Tạo bài học</button>
+          </form>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+            <button class="btn-secondary" onclick="exportUpdatedDataJs()">📥 Xuất file data.js</button>
+            <button class="btn-secondary" onclick="resetAllProgress()">🗑️ Reset dữ liệu</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL CHI TIẾT CHỮ CÁI & TẬP VIẾT -->
+  <div class="modal-backdrop" id="kanaModalBackdrop" onclick="closeKanaModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeKanaModal()">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div id="modalCharBig" class="modal-char-box">あ</div>
+        <div>
+          <span id="modalRowBadge" style="font-size: 0.78rem; color: var(--text-muted);">Hàng A</span>
+          <h2 id="modalRomajiTitle" style="font-size: 1.4rem;">"a"</h2>
+          <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+            <button class="btn-primary btn-sm" onclick="speakModalChar()">🔊 Phát âm</button>
+            <button class="btn-secondary btn-sm" id="modalMasterBtn" onclick="toggleMasterCurrentKana()">✅ Đã thuộc</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div>
+          <div class="mnemonic-box">
+            <p id="modalMnemonicText" style="font-size: 0.92rem;"></p>
+            <div id="modalVisualArt" style="margin-top: 8px; text-align: center;"></div>
+          </div>
+
+          <div class="vocab-card" style="margin-top: 10px;">
+            <div class="vocab-header">
+              <span style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted);">VÍ DỤ:</span>
+              <button class="audio-btn" onclick="speakModalExample()">🔊 Nghe</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin: 6px 0;">
+              <span id="modalExIcon" style="font-size: 2rem;">🍬</span>
+              <div>
+                <div id="modalExWord" class="vocab-jp">あめ (ame)</div>
+                <div id="modalExMeaning" class="vocab-vi" style="margin: 0;">Kẹo / Cơn mưa</div>
+              </div>
+            </div>
+            <div id="modalExSentence" class="vocab-example"></div>
+          </div>
+        </div>
+
+        <div style="text-align: center;">
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px;">
+            Tập viết (<span id="modalStrokesCount">3</span> nét):
+          </p>
+          <div class="canvas-wrapper">
+            <div class="canvas-crosshair-h"></div>
+            <div class="canvas-crosshair-v"></div>
+            <div class="canvas-guide-char" id="canvasGuideChar">あ</div>
+            <canvas id="drawCanvas" width="240" height="240"></canvas>
+          </div>
+          <div style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;">
+            <button class="btn-secondary btn-sm" onclick="clearCanvas()">🧹 Xóa</button>
+            <button class="btn-primary btn-sm" onclick="rewardPracticeWriting()">✨ Lưu nét</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
